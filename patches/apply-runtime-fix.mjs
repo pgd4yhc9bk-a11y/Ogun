@@ -45,7 +45,7 @@ app = app.replace(
 );
 app = app.replace(
   "export default function App() {\n",
-  "let GameScreenModule: typeof import('./src/GameScreen') | null = null;\n\nconst getGameScreen = () => {\n  GameScreenModule ??= require('./src/GameScreen');\n  return GameScreenModule.default;\n};\n\nexport default function App() {\n"
+  "let GameScreenModule: any = null;\n\nconst getGameScreen = () => {\n  if (GameScreenModule === null) GameScreenModule = require('./src/GameScreen');\n  return GameScreenModule.default;\n};\n\nexport default function App() {\n"
 );
 app = app.replace(
   "        {/* oyun intro sırasında arkada yüklenir, geçişte bekleme olmaz */}\n        {phase !== 'loading' && <GameScreen visible={phase === 'game'} onReady={gameReady} />}\n",
