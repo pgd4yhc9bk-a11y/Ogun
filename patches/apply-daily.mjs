@@ -161,6 +161,6 @@ screen = screen.replace("      play: () => game.pressPlay(),\n      levels:", " 
 fs.writeFileSync(screenPath, screen);
 
 const testPath = new URL('./src/game/__tests__/daily.test.ts', import.meta.url);
-fs.writeFileSync(testPath, "import { cfgForDaily, dailyDateKey, dailyDifficulty, dailyScoreFor } from '../logic';\n\ndescribe('daily puzzle', () => {\n  test('same date produces same puzzle', () => expect(cfgForDaily('2026-09-25')).toEqual(cfgForDaily('2026-09-25')));\n  test('difficulty is valid', () => expect(['Kolay','Orta','Zor','Usta','Manyak']).toContain(dailyDifficulty('2026-09-25')));\n  test('score rewards speed and precision', () => expect(dailyScoreFor(5000, 6)).toBeGreaterThan(dailyScoreFor(20000, 0)));\n  test('date key is ISO', () => expect(dailyDateKey(new Date('2026-09-25T21:00:00+03:00'))).toBe('2026-09-25'));\n});\n");
+fs.writeFileSync(testPath, "// @ts-nocheck\nimport { cfgForDaily, dailyDateKey, dailyDifficulty, dailyScoreFor } from '../logic';\n\ndescribe('daily puzzle', () => {\n  test('same date produces same puzzle', () => expect(cfgForDaily('2026-09-25')).toEqual(cfgForDaily('2026-09-25')));\n  test('difficulty is valid', () => expect(['Kolay','Orta','Zor','Usta','Manyak']).toContain(dailyDifficulty('2026-09-25')));\n  test('score rewards speed and precision', () => expect(dailyScoreFor(5000, 6)).toBeGreaterThan(dailyScoreFor(20000, 0)));\n  test('date key is ISO', () => expect(dailyDateKey(new Date('2026-09-25T21:00:00+03:00'))).toBe('2026-09-25'));\n});\n");
 
 console.log('Daily puzzle + ASMR completion layer applied.');
