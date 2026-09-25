@@ -1,6 +1,7 @@
 name: Dişli Android
 # EAS token configured in repository secrets
 # Rebuild after runtime audio fix
+# Lazy-load native game stack after intro
 
 on:
   push:
