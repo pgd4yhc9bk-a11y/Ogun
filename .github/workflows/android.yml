@@ -1,4 +1,5 @@
 name: Dişli Android
+# EAS token configured in repository secrets
 
 on:
   push:
