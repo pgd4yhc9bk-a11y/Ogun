@@ -6,6 +6,8 @@ on:
     paths:
       - 'Disli-kaynak.zip'
       - 'patches/apply-progression.mjs'
+      - 'patches/apply-runtime-fix.mjs'
+      - 'patches/apply-daily.mjs'
       - '.github/workflows/gameplay-check.yml'
   workflow_dispatch:
 
@@ -23,9 +25,13 @@ jobs:
           rm -rf Disli
           unzip -q Disli-kaynak.zip
           cp patches/apply-progression.mjs Disli/apply-progression.mjs
+          cp patches/apply-runtime-fix.mjs Disli/apply-runtime-fix.mjs
+          cp patches/apply-daily.mjs Disli/apply-daily.mjs
           cd Disli
           node apply-progression.mjs
-          rm apply-progression.mjs
+          node apply-runtime-fix.mjs
+          node apply-daily.mjs
+          rm apply-progression.mjs apply-runtime-fix.mjs apply-daily.mjs
       - name: Install
         working-directory: Disli
         run: npm ci
