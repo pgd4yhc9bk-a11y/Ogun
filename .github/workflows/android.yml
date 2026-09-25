@@ -46,10 +46,11 @@ jobs:
           test -f Disli/package.json
           cp patches/apply-progression.mjs Disli/apply-progression.mjs
           cp patches/apply-runtime-fix.mjs Disli/apply-runtime-fix.mjs
-            cp patches/apply-daily.mjs Disli/apply-daily.mjs
+          cp patches/apply-daily.mjs Disli/apply-daily.mjs
           cd Disli
           node apply-progression.mjs
           node apply-runtime-fix.mjs
+          node apply-daily.mjs
           cp ../patches/apply-eas-config.mjs apply-eas-config.mjs
           node apply-eas-config.mjs
 
