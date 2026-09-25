@@ -43,6 +43,8 @@ jobs:
           cp patches/apply-progression.mjs Disli/apply-progression.mjs
           cd Disli
           node apply-progression.mjs
+          cp ../patches/apply-eas-config.mjs apply-eas-config.mjs
+          node apply-eas-config.mjs
 
       - name: Expo projectId kontrolü
         run: |
