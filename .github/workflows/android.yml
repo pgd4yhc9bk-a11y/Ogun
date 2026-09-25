@@ -1,6 +1,12 @@
 name: Dişli Android
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'Disli-kaynak.zip'
+      - 'patches/**'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
       tur:
@@ -70,7 +76,8 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           mkdir -p cikti
-          if [ "${{ inputs.tur }}" = "aab" ]; then
+          TUR="${{ inputs.tur || 'apk' }}"
+          if [ "$TUR" = "aab" ]; then
             eas build --platform android --profile production --local --non-interactive --output cikti/disli.aab
           else
             eas build --platform android --profile preview --local --non-interactive --output cikti/disli.apk
@@ -79,6 +86,6 @@ jobs:
       - name: Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: disli-${{ inputs.tur }}
+          name: disli-${{ inputs.tur || 'apk' }}
           path: Disli/cikti/
           retention-days: 14
