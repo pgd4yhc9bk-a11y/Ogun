@@ -1,0 +1,84 @@
+name: Dişli Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      tur:
+        description: 'Ne üretelim?'
+        type: choice
+        default: 'apk'
+        options:
+          - 'apk'
+          - 'aab'
+
+concurrency:
+  group: disli-android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Repository
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Hazırla
+        run: |
+          test -f Disli-kaynak.zip
+          rm -rf Disli
+          unzip -q Disli-kaynak.zip
+          test -f Disli/package.json
+          cp patches/apply-progression.mjs Disli/apply-progression.mjs
+          cd Disli
+          node apply-progression.mjs
+
+      - name: Expo projectId kontrolü
+        run: |
+          node -e "const x=require('./Disli/app.json'); if(!x.expo.extra?.eas?.projectId) { console.error('app.json içinde expo.extra.eas.projectId yok. Önce Expo projesini EAS ile bağla.'); process.exit(1) }"
+
+      - name: Paketler
+        working-directory: Disli
+        run: npm ci
+
+      - name: Testler
+        working-directory: Disli
+        run: npm test -- --runInBand --watch=false
+
+      - name: TypeScript
+        working-directory: Disli
+        run: npx tsc --noEmit
+
+      - name: Expo Doctor
+        working-directory: Disli
+        run: npx expo-doctor
+
+      - name: EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Android build
+        working-directory: Disli
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          mkdir -p cikti
+          if [ "${{ inputs.tur }}" = "aab" ]; then
+            eas build --platform android --profile production --local --non-interactive --output cikti/disli.aab
+          else
+            eas build --platform android --profile preview --local --non-interactive --output cikti/disli.apk
+          fi
+
+      - name: Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: disli-${{ inputs.tur }}
+          path: Disli/cikti/
+          retention-days: 14
