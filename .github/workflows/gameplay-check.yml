@@ -1,0 +1,39 @@
+name: Dişli Gameplay Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Disli-kaynak.zip'
+      - 'patches/apply-progression.mjs'
+      - '.github/workflows/gameplay-check.yml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Disli/package-lock.json
+      - name: Extract and patch
+        run: |
+          rm -rf Disli
+          unzip -q Disli-kaynak.zip
+          cp patches/apply-progression.mjs Disli/apply-progression.mjs
+          cd Disli
+          node apply-progression.mjs
+          rm apply-progression.mjs
+      - name: Install
+        working-directory: Disli
+        run: npm ci
+      - name: Tests
+        working-directory: Disli
+        run: npm test -- --runInBand --watch=false
+      - name: TypeScript
+        working-directory: Disli
+        run: npx tsc --noEmit
