@@ -152,7 +152,7 @@ fs.writeFileSync(testPath, t);
   const p = new URL('./src/game/ui/Menus.tsx', import.meta.url);
   let x = fs.readFileSync(p, 'utf8');
   const start = x.indexOf('export default function Menus');
-  const stylesAt = x.indexOf('const styles=', start);
+  const stylesAt = x.indexOf('const styles', start);
   if (start < 0 || stylesAt < 0) throw new Error('Menus boundaries missing');
   const header = x.slice(0, start);
   const styles = x.slice(stylesAt);
