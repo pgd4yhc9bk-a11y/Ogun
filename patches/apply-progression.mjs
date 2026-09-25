@@ -74,3 +74,38 @@ const newHint = `  if (state === 'hover' && placed === 0 && level <= 20) {
 if (!d.includes(oldHint)) throw new Error('draw hint block not found');
 d = d.replace(oldHint, newHint);
 fs.writeFileSync(drawPath, d);
+
+const testPath = new URL('./src/game/__tests__/logic.test.ts', import.meta.url);
+let t = fs.readFileSync(testPath, 'utf8');
+const oldPrototype = `  test('prototiple birebir aynı değerler', () => {
+    const c5 = cfgFor(5);
+    expect(c5.K).toBe(4);
+    expect(c5.teeth).toEqual([18, 12, 20, 16]);
+    expect(c5.f).toBeCloseTo(1.261321, 5);
+    expect(c5.tol).toBeCloseTo(0.233, 6);
+    expect(cfgFor(60).K).toBe(8);
+  });`;
+const newPrototype = `  test('öğretici progression fazları doğru sırada zorlaşır', () => {
+    const c1 = cfgFor(1), c3 = cfgFor(3), c7 = cfgFor(7), c12 = cfgFor(12);
+    const c16 = cfgFor(16), c20 = cfgFor(20), c60 = cfgFor(60);
+    expect(c1.tol).toBeCloseTo(0.30, 6);
+    expect(c1.f).toBeLessThan(c3.f);
+    expect(c3.tol).toBeGreaterThan(c7.tol);
+    expect(c7.tol).toBeGreaterThan(c12.tol);
+    expect(c12.f).toBeLessThan(c16.f);
+    expect(c16.tol).toBeGreaterThan(c20.tol);
+    expect(c20.tol).toBeGreaterThan(c60.tol);
+    expect(c20.f).toBeLessThan(c60.f);
+    expect(c1.wobble).toBe(0);
+    expect(c1.spin.every(s => s === 0)).toBe(true);
+    expect(c1.flip).toBe(0);
+    expect(cfgFor(60).K).toBe(8);
+  });`;
+if (!t.includes(oldPrototype)) throw new Error('old progression test not found');
+t = t.replace(oldPrototype, newPrototype);
+t = t.replace('expect(c.tol).toBeGreaterThanOrEqual(0.17 - 1e-9);', 'expect(c.tol).toBeGreaterThanOrEqual(0.15 - 1e-9);');
+t = t.replace('expect(c.f).toBeLessThanOrEqual(2.41);', 'expect(c.f).toBeLessThanOrEqual(2.32);');
+t = t.replace('if (l < 14) expect(c.spin.every(s => s === 0)).toBe(true);', 'if (l <= 7) expect(c.spin.every(s => s === 0)).toBe(true);');
+t = t.replace('if (l < 10) expect(c.wobble).toBe(0);', 'if (l <= 7) expect(c.wobble).toBe(0);');
+t = t.replace('if (l < 20) expect(c.flip).toBe(0);', 'if (l <= 16) expect(c.flip).toBe(0);');
+fs.writeFileSync(testPath, t);
