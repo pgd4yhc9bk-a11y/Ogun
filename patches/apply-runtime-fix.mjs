@@ -29,3 +29,28 @@ feedback = feedback.replace(
 fs.writeFileSync(feedbackPath, feedback);
 
 console.log('Runtime audio fix applied: intro visuals preserved and intro sound lazy-loaded.');
+
+
+const appPath = new URL('./App.tsx', import.meta.url);
+let app = fs.readFileSync(appPath, 'utf8');
+
+// Do not import the game stack while the intro is running.
+// GameScreen pulls in Skia, fonts, haptics and gameplay audio; loading all of
+// those native modules during the intro can crash some Android release builds
+// before the first frame is stable. The game module is required only after the
+// intro has finished.
+app = app.replace(
+  "import GameScreen from './src/GameScreen';\n",
+  ''
+);
+app = app.replace(
+  "export default function App() {\n",
+  "let GameScreenModule: typeof import('./src/GameScreen') | null = null;\n\nconst getGameScreen = () => {\n  GameScreenModule ??= require('./src/GameScreen');\n  return GameScreenModule.default;\n};\n\nexport default function App() {\n"
+);
+app = app.replace(
+  "        {/* oyun intro sırasında arkada yüklenir, geçişte bekleme olmaz */}\n        {phase !== 'loading' && <GameScreen visible={phase === 'game'} onReady={gameReady} />}\n",
+  "        {phase === 'game' && (() => {\n          const GameScreen = getGameScreen();\n          return <GameScreen visible onReady={gameReady} />;\n        })()}\n"
+);
+fs.writeFileSync(appPath, app);
+
+console.log('Runtime fix updated: game native stack is lazy-loaded after intro.');
