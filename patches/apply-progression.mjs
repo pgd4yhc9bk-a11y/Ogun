@@ -155,7 +155,7 @@ fs.writeFileSync(testPath, t);
   const stylesAt = x.indexOf('const styles', start);
   if (start < 0 || stylesAt < 0) throw new Error('Menus boundaries missing');
   const header = x.slice(0, start);
-  const styles = x.slice(stylesAt);
+  const styles = x.slice(stylesAt).replace('const styles = StyleSheet.create({', 'const styles = StyleSheet.create({ stats:{marginTop:18,gap:4}, errors:{flexDirection:\'row\',justifyContent:\'space-around\',marginTop:10}, small:{fontFamily:FONT.medium,fontSize:12}, group:{width:\'100%\',maxWidth:420,marginBottom:18}, groupTitle:{fontFamily:FONT.bold,fontSize:13,letterSpacing:1,textAlign:\'center\',marginBottom:8}, ');
   const body = `export default function Menus({ game, C, act }: Props) {
   const total = MAX_LEVEL * 3;
   switch (game.overlay) {
