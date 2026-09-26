@@ -104,6 +104,11 @@ jobs:
           script: |
             set +e
             rm -f Disli/smoke-result.txt
+            adb get-state >/dev/null 2>&1
+            if [ $? -ne 0 ]; then
+              echo 'INFRA: ADB emulator is not ready' | tee Disli/smoke-result.txt
+              exit 2
+            fi
             echo '=== INSTALL ==='
             timeout 90s adb install -r Disli/cikti/disli.apk
             rc=$?
