@@ -1,8 +1,5 @@
 name: Dişli Android
 # EAS token configured in repository secrets
-# Rebuild after runtime audio fix
-# Lazy-load native game stack after intro
-# Trigger after TypeScript fix
 
 on:
   push:
@@ -56,7 +53,9 @@ jobs:
           cat > smoke.sh <<'SMOKE'
           #!/usr/bin/env bash
           set +e
-          RESULT="smoke-result.txt"
+          ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
+          RESULT="$ROOT/Disli/smoke-result.txt"
+          APK="$ROOT/Disli/cikti/disli.apk"
           rm -f "$RESULT"
 
           adb get-state >/dev/null 2>&1
@@ -67,7 +66,7 @@ jobs:
           fi
 
           echo '=== INSTALL ==='
-          timeout 90s adb install -r Disli/cikti/disli.apk
+          timeout 90s adb install -r "$APK"
           rc=$?
           if [ "$rc" -ne 0 ]; then
             echo "FAIL: adb install rc=$rc" | tee "$RESULT"
@@ -193,8 +192,10 @@ jobs:
           exit 1
 
       - name: Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: disli-${{ inputs.tur || 'apk' }}
           path: Disli/cikti/
+          if-no-files-found: warn
           retention-days: 14
