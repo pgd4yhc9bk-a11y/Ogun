@@ -121,12 +121,12 @@ jobs:
             sleep 12
             if ! adb shell pidof com.aslaninteraktif.disli >/dev/null; then
               echo 'FAIL: Dişli process is not alive after launch' | tee Disli/smoke-result.txt
-              echo '=== DIŞLI CRASH LOG ===
+              echo '=== DIŞLI CRASH LOG ==='
               adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 4 || true
               exit 1
             fi
             echo 'PASS: Dişli process stayed alive for 12 seconds' | tee Disli/smoke-result.txt
-            echo '=== DIŞLI SMOKE OK ===
+            echo '=== DIŞLI SMOKE OK ==='
             adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 2 || true
 
       - name: Smoke sonucu
