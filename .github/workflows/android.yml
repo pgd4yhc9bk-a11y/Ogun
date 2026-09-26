@@ -53,6 +53,78 @@ jobs:
           node apply-daily.mjs
           cp ../patches/apply-eas-config.mjs apply-eas-config.mjs
           node apply-eas-config.mjs
+          cat > smoke.sh <<'SMOKE'
+          #!/usr/bin/env bash
+          set +e
+          RESULT="smoke-result.txt"
+          rm -f "$RESULT"
+
+          adb get-state >/dev/null 2>&1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo 'INFRA: ADB emulator is not ready' | tee "$RESULT"
+            exit 2
+          fi
+
+          echo '=== INSTALL ==='
+          timeout 90s adb install -r cikti/disli.apk
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: adb install rc=$rc" | tee "$RESULT"
+            exit 1
+          fi
+
+          adb logcat -c
+          echo '=== FIRST LAUNCH / INTRO -> GAME ==='
+          timeout 30s adb shell monkey -p com.aslaninteraktif.disli 1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: first launch rc=$rc" | tee "$RESULT"
+            adb logcat -d -v time | tail -n 250
+            exit 1
+          fi
+
+          sleep 20
+          timeout 10s adb shell pidof com.aslaninteraktif.disli >/dev/null
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo 'FAIL: app died after intro/game transition' | tee "$RESULT"
+            echo '=== CRASH LOG ==='
+            adb logcat -d -v time | tail -n 400
+            exit 1
+          fi
+
+          echo '=== SECOND LAUNCH ==='
+          timeout 10s adb shell am force-stop com.aslaninteraktif.disli
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: force-stop rc=$rc" | tee "$RESULT"
+            exit 1
+          fi
+
+          timeout 30s adb shell monkey -p com.aslaninteraktif.disli 1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: second launch rc=$rc" | tee "$RESULT"
+            adb logcat -d -v time | tail -n 400
+            exit 1
+          fi
+
+          sleep 10
+          timeout 10s adb shell pidof com.aslaninteraktif.disli >/dev/null
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo 'FAIL: app did not survive second launch' | tee "$RESULT"
+            echo '=== CRASH LOG ==='
+            adb logcat -d -v time | tail -n 400
+            exit 1
+          fi
+
+          echo 'PASS: first launch survived intro/game and second launch succeeded' | tee "$RESULT"
+          echo '=== CRASH FILTER ==='
+          adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 3 || true
+          SMOKE
+          chmod +x smoke.sh
 
       - name: Expo projectId kontrolü
         run: |
@@ -101,66 +173,7 @@ jobs:
           api-level: 35
           arch: x86_64
           profile: pixel_2
-          script: |
-            set +e
-            rm -f Disli/smoke-result.txt
-
-            if ! adb get-state >/dev/null 2>&1; then
-              echo 'INFRA: ADB emulator is not ready' | tee Disli/smoke-result.txt
-              exit 2
-            fi
-
-            echo '=== INSTALL ==='
-            timeout 90s adb install -r Disli/cikti/disli.apk
-            rc=$?
-            if [ "$rc" -ne 0 ]; then
-              echo "FAIL: adb install rc=$rc" | tee Disli/smoke-result.txt
-              exit 1
-            fi
-
-            adb logcat -c
-            echo '=== FIRST LAUNCH / INTRO -> GAME ==='
-            timeout 30s adb shell monkey -p com.aslaninteraktif.disli 1
-            rc=$?
-            if [ "$rc" -ne 0 ]; then
-              echo "FAIL: first launch rc=$rc" | tee Disli/smoke-result.txt
-              adb logcat -d -v time | tail -n 250
-              exit 1
-            fi
-
-            sleep 20
-            timeout 10s adb shell pidof com.aslaninteraktif.disli >/dev/null
-            rc=$?
-            if [ "$rc" -ne 0 ]; then
-              echo 'FAIL: app died after intro/game transition' | tee Disli/smoke-result.txt
-              echo '=== CRASH LOG ==='
-              adb logcat -d -v time | tail -n 400
-              exit 1
-            fi
-
-            echo '=== SECOND LAUNCH ==='
-            timeout 10s adb shell am force-stop com.aslaninteraktif.disli
-            timeout 30s adb shell monkey -p com.aslaninteraktif.disli 1
-            rc=$?
-            if [ "$rc" -ne 0 ]; then
-              echo "FAIL: second launch rc=$rc" | tee Disli/smoke-result.txt
-              adb logcat -d -v time | tail -n 400
-              exit 1
-            fi
-
-            sleep 10
-            timeout 10s adb shell pidof com.aslaninteraktif.disli >/dev/null
-            rc=$?
-            if [ "$rc" -ne 0 ]; then
-              echo 'FAIL: app did not survive second launch' | tee Disli/smoke-result.txt
-              echo '=== CRASH LOG ==='
-              adb logcat -d -v time | tail -n 400
-              exit 1
-            fi
-
-            echo 'PASS: first launch survived intro/game and second launch succeeded' | tee Disli/smoke-result.txt
-            echo '=== CRASH FILTER ==='
-            adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 3 || true
+          script: bash Disli/smoke.sh
 
       - name: Smoke sonucu
         if: ${{ inputs.tur != 'aab' }}
