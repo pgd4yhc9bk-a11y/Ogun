@@ -67,7 +67,7 @@ jobs:
           fi
 
           echo '=== INSTALL ==='
-          timeout 90s adb install -r cikti/disli.apk
+          timeout 90s adb install -r Disli/cikti/disli.apk
           rc=$?
           if [ "$rc" -ne 0 ]; then
             echo "FAIL: adb install rc=$rc" | tee "$RESULT"
