@@ -164,6 +164,7 @@ jobs:
             eas build --platform android --profile preview --local --non-interactive --output cikti/disli.apk
           fi
 
+
       - name: Android smoke test (emulator)
         if: ${{ inputs.tur != 'aab' }}
         continue-on-error: true
@@ -172,6 +173,8 @@ jobs:
           api-level: 35
           arch: x86_64
           profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: bash Disli/smoke.sh
 
       - name: Smoke sonucu
