@@ -94,25 +94,50 @@ jobs:
           fi
 
       - name: Android smoke test (emulator)
-        if: \${{ inputs.tur != 'aab' }}
+        if: ${{ inputs.tur != 'aab' }}
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_2
           script: |
+            set +e
+            rm -f Disli/smoke-result.txt
             adb install -r Disli/cikti/disli.apk
+            install_rc=$?
+            if [ "$install_rc" -ne 0 ]; then
+              echo "FAIL: adb install exited $install_rc" | tee Disli/smoke-result.txt
+              exit 1
+            fi
             adb logcat -c
             adb shell monkey -p com.aslaninteraktif.disli 1
-            sleep 12
-            if ! adb shell pidof com.aslaninteraktif.disli >/dev/null; then
-              echo '=== DIŞLI CRASH LOG ==='
+            launch_rc=$?
+            if [ "$launch_rc" -ne 0 ]; then
+              echo "FAIL: app launch exited $launch_rc" | tee Disli/smoke-result.txt
               adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 4 || true
               exit 1
             fi
-            echo '=== DIŞLI SMOKE OK ==='
+            sleep 12
+            if ! adb shell pidof com.aslaninteraktif.disli >/dev/null; then
+              echo 'FAIL: Dişli process is not alive after launch' | tee Disli/smoke-result.txt
+              echo '=== DIŞLI CRASH LOG ===
+              adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 4 || true
+              exit 1
+            fi
+            echo 'PASS: Dişli process stayed alive for 12 seconds' | tee Disli/smoke-result.txt
+            echo '=== DIŞLI SMOKE OK ===
             adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 2 || true
 
+      - name: Smoke sonucu
+        if: ${{ inputs.tur != 'aab' }}
+        run: |
+          test -f Disli/smoke-result.txt || {
+            echo 'Smoke sonucu alınamadı: emulator/ADB altyapısı script başlamadan veya sırasında çöktü.'
+            exit 1
+          }
+          cat Disli/smoke-result.txt
+          grep -q '^PASS:' Disli/smoke-result.txt
       - name: Artifact
         uses: actions/upload-artifact@v4
         with:
