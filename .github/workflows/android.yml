@@ -56,72 +56,94 @@ jobs:
           ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
           RESULT="$ROOT/Disli/smoke-result.txt"
           APK="$ROOT/Disli/cikti/disli.apk"
+          ADB_DEVICE="emulator-5554"
           rm -f "$RESULT"
 
-          adb get-state >/dev/null 2>&1
-          rc=$?
-          if [ "$rc" -ne 0 ]; then
+          echo '=== ADB READY ==='
+          ready=0
+          for _ in {1..30}; do
+            state=$(adb -s "$ADB_DEVICE" get-state 2>/dev/null)
+            if [ "$state" = "device" ]; then
+              ready=1
+              break
+            fi
+            adb reconnect device >/dev/null 2>&1 || true
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
             echo 'INFRA: ADB emulator is not ready' | tee "$RESULT"
+            adb devices -l || true
             exit 2
           fi
 
           echo '=== INSTALL ==='
-          timeout 90s adb install -r "$APK"
+          rm -f /tmp/disli-install.log
+          timeout 300s adb -s "$ADB_DEVICE" push "$APK" /data/local/tmp/disli.apk > /tmp/disli-install.log 2>&1
           rc=$?
           if [ "$rc" -ne 0 ]; then
-            echo "FAIL: adb install rc=$rc" | tee "$RESULT"
+            echo "FAIL: adb push rc=$rc" | tee "$RESULT"
+            tail -n 80 /tmp/disli-install.log || true
             exit 1
           fi
 
-          adb logcat -c
+          timeout 120s adb -s "$ADB_DEVICE" shell pm install -r /data/local/tmp/disli.apk > /tmp/disli-pm-install.log 2>&1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: pm install rc=$rc" | tee "$RESULT"
+            tail -n 80 /tmp/disli-pm-install.log || true
+            exit 1
+          fi
+          adb -s "$ADB_DEVICE" shell rm -f /data/local/tmp/disli.apk
+
+          adb -s "$ADB_DEVICE" logcat -c
           echo '=== FIRST LAUNCH / INTRO -> GAME ==='
-          timeout 30s adb shell monkey -p com.aslaninteraktif.disli 1
+          timeout 30s adb -s "$ADB_DEVICE" shell monkey -p com.aslaninteraktif.disli 1
           rc=$?
           if [ "$rc" -ne 0 ]; then
             echo "FAIL: first launch rc=$rc" | tee "$RESULT"
-            adb logcat -d -v time | tail -n 250
+            adb -s "$ADB_DEVICE" logcat -d -v time | tail -n 250
             exit 1
           fi
 
           sleep 20
-          timeout 10s adb shell pidof com.aslaninteraktif.disli >/dev/null
+          timeout 10s adb -s "$ADB_DEVICE" shell pidof com.aslaninteraktif.disli >/dev/null
           rc=$?
           if [ "$rc" -ne 0 ]; then
             echo 'FAIL: app died after intro/game transition' | tee "$RESULT"
             echo '=== CRASH LOG ==='
-            adb logcat -d -v time | tail -n 400
+            adb -s "$ADB_DEVICE" logcat -d -v time | tail -n 400
             exit 1
           fi
 
           echo '=== SECOND LAUNCH ==='
-          timeout 10s adb shell am force-stop com.aslaninteraktif.disli
+          timeout 10s adb -s "$ADB_DEVICE" shell am force-stop com.aslaninteraktif.disli
           rc=$?
           if [ "$rc" -ne 0 ]; then
             echo "FAIL: force-stop rc=$rc" | tee "$RESULT"
             exit 1
           fi
 
-          timeout 30s adb shell monkey -p com.aslaninteraktif.disli 1
+          timeout 30s adb -s "$ADB_DEVICE" shell monkey -p com.aslaninteraktif.disli 1
           rc=$?
           if [ "$rc" -ne 0 ]; then
             echo "FAIL: second launch rc=$rc" | tee "$RESULT"
-            adb logcat -d -v time | tail -n 400
+            adb -s "$ADB_DEVICE" logcat -d -v time | tail -n 400
             exit 1
           fi
 
           sleep 10
-          timeout 10s adb shell pidof com.aslaninteraktif.disli >/dev/null
+          timeout 10s adb -s "$ADB_DEVICE" shell pidof com.aslaninteraktif.disli >/dev/null
           rc=$?
           if [ "$rc" -ne 0 ]; then
             echo 'FAIL: app did not survive second launch' | tee "$RESULT"
             echo '=== CRASH LOG ==='
-            adb logcat -d -v time | tail -n 400
+            adb -s "$ADB_DEVICE" logcat -d -v time | tail -n 400
             exit 1
           fi
 
           echo 'PASS: first launch survived intro/game and second launch succeeded' | tee "$RESULT"
           echo '=== CRASH FILTER ==='
-          adb logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 3 || true
+          adb -s "$ADB_DEVICE" logcat -d -v time | grep -E 'FATAL EXCEPTION|AndroidRuntime|SIG(SEGV|ABRT)|UnsatisfiedLinkError|Skia|RNSkia|expo|ReactNativeJS' -C 3 || true
           SMOKE
           chmod +x smoke.sh
 
@@ -163,7 +185,6 @@ jobs:
           else
             eas build --platform android --profile preview --local --non-interactive --output cikti/disli.apk
           fi
-
 
       - name: Android smoke test (emulator)
         if: ${{ inputs.tur != 'aab' }}
